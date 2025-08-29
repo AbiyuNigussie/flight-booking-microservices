@@ -1,100 +1,120 @@
-<div align="center" style="margin-bottom:20px">
-  <img src="assets/logo.png" alt="booking-microservices-nestjs" />
-    <div align="center">
-                       <a href="https://github.com/AbiyuNigussie/booking-microservices-nestjs/actions/workflows/ci.yml"><img src="https://github.com/AbiyuNigussie/booking-microservices-nestjs/actions/workflows/ci.yml/badge.svg?branch=main&style=flat-square"/></a>
-                       <a href="https://github.com/AbiyuNigussie/booking-microservices-nestjs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AbiyuNigussie/booking-microservices-nestjs?color=%234275f5&style=flat-square"/></a>
-    </div>
-</div>
-           
-> **A practical and imaginary microservices for implementing an infrastructure for up and running distributed system with the latest technology and architecture like Vertical Slice Architecture, Event Driven Architecture, CQRS, Postgres, RabbitMQ and Nestjs.** 🚀
+# Booking Microservices NestJS
 
-> 💡 **This project is not business-oriented and most of my focus was in the thechnical part for implement a distributed system with a sample project. In this project I implemented some concept in microservices like Messaging, Tracing, Event Driven Architecture, Vertical Slice Architecture, CQRS.**
+A distributed microservices architecture built with NestJS, implementing Vertical Slice Architecture, Event-Driven Architecture, CQRS, PostgreSQL with TypeORM, RabbitMQ, and OpenTelemetry.
 
+---
 
+## Architectural Principles
 
-Instead of grouping related action methods in one controller, as found in traditional ASP.net controllers, I used the [REPR pattern](https://deviq.com/design-patterns/repr-design-pattern). Each action gets its own small endpoint, consisting of a route, the action, and an `IMediator` instance (see [MediatR](https://github.com/jbogard/MediatR)). The request is passed to the `IMediator` instance, routed through a [`Mediatr pipeline`](https://lostechies.com/jimmybogard/2014/09/09/tackling-cross-cutting-concerns-with-a-mediator-pipeline/) where custom [middleware](https://github.com/jbogard/MediatR/wiki/Behaviors) can log, validate and intercept requests. The request is then handled by a request specific `IRequestHandler` which performs business logic before returning the result.
+### Vertical Slice Architecture & REPR Pattern
+Instead of traditional monolithic layered structures, this project organizes functionality into vertical slices around business features. Each slice encapsulates its route, request handling, business logic, persistence, and response handling.
 
-The use of the [mediator pattern](https://dotnetcoretutorials.com/2019/04/30/the-mediator-pattern-in-net-core-part-1-whats-a-mediator/) in my controllers creates clean and [thin controllers](https://codeopinion.com/thin-controllers-cqrs-mediatr/). By separating action logic into individual handlers we support the [Single Responsibility Principle](https://en.wikipedia.org/wiki/Single_responsibility_principle) and [Don't Repeat Yourself principles](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself), this is because traditional controllers tend to become bloated with large action methods and several injected `Services` only being used by a few methods.
+By decoupling features into independent slices:
+* High cohesion within each business capability.
+* Low coupling between unrelated features.
+* Simplified maintenance and testing.
 
-I used CQRS to decompose my features into small parts that makes our application:
+### Command Query Responsibility Segregation (CQRS)
+Using NestJS `@nestjs/cqrs`, read operations (queries) are separated from write operations (commands):
+* **Commands**: Handle business logic and data mutations.
+* **Queries**: Optimised data retrieval with minimal overhead.
+* **Events**: Internal domain events and inter-service integration events published via RabbitMQ.
 
-- Maximize performance, scalability and simplicity.
-- Easy to maintain and add features to. Changes only affect one command or query, avoiding breaking changes or creating side effects.
-- It gives us better separation of concerns and cross-cutting concern (with help of mediatr behavior pipelines), instead of bloated service classes doing many things.
+---
 
-Using the CQRS pattern, we cut each business functionality into vertical slices, for each of these slices we group classes (see [technical folders structure](http://www.kamilgrzybek.com/design/feature-folders)) specific to that feature together (command, handlers, infrastructure, repository, controllers, etc). In our CQRS pattern each command/query handler is a separate slice. This is where you can reduce coupling between layers. Each handler can be a separated code unit, even copy/pasted. Thanks to that, we can tune down the specific method to not follow general conventions (e.g. use custom SQL query or even different storage). In a traditional layered architecture, when we change the core generic mechanism in one layer, it can impact all methods.
+## Services Architecture
 
-## How to Use Migrations
-> Note: For easy using of migrations commands in typeorm, I add some scripts in `package.json` and base on these scripts we can use below commands to generate and run migrations easily.
+| Service | Port | Description | Persistence |
+| :--- | :--- | :--- | :--- |
+| **Identity Service** | `3333` | Authentication, JWT management, and User accounts | PostgreSQL (`identity`) |
+| **Flight Service** | `3344` | Airports, Aircraft, Flight scheduling, and Seat inventory | PostgreSQL (`flight`) |
+| **Passenger Service** | `3355` | Passenger profile management | PostgreSQL (`passenger`) |
+| **Booking Service** | `3366` | Flight reservation and booking processing | PostgreSQL (`booking`) |
 
-For `generating` a new migration use this command in the root of each microservice:
+---
 
-```bash
-npm run migration:generate -- src/data/migrations/new-migration-name
-```
+## Getting Started
 
-Also for `running` migration use this command in the root of each microservice:
-```bash
-npm run migration:run  
-```
+### Infrastructure Setup
 
-## How to Run
-
-
-> ### Docker Compose
-
-Use the command below to run our `infrastructure` with `docker` using the [infrastructure.yaml](./deployments/docker-compose/infrastructure.yaml) file at the `root` of the app:
+Start the required infrastructure (PostgreSQL, RabbitMQ, OpenTelemetry Collector, Prometheus, Tempo, Loki, Grafana) using Docker Compose:
 
 ```bash
 docker-compose -f ./deployments/docker-compose/infrastructure.yaml up -d
 ```
-##### Todo
-I will add `docker-compsoe` for up and running whole app here in the next...
 
-> ### Build
-To `build` each microservice, run this command in the root directory of each microservice where the `package.json` file is located:
+### Full Application Stack
+
+To launch all microservices along with infrastructure via Docker Compose:
+
+```bash
+docker-compose -f ./deployments/docker-compose/docker-compose.yaml up -d
+```
+
+---
+
+## Development Workflow
+
+### Building Services
+To build a microservice, execute the following within the service directory:
+
 ```bash
 npm run build
 ```
 
-> ### Run
-To `run` each microservice, run this command in the root of the microservice where `package.json` is located:
+### Running Services
+To run a microservice in watch mode:
+
 ```bash
 npm run dev
 ```
 
-> ### Test
+### Database Migrations
+Migrations are managed per service using TypeORM.
 
-To `test` each microservice, run this command in the root directory of the microservice where the `package.json` file is located:
+* **Generate Migration**:
+  ```bash
+  npm run migration:generate -- src/data/migrations/migration-name
+  ```
+* **Run Migrations**:
+  ```bash
+  npm run migration:run
+  ```
+* **Revert Migration**:
+  ```bash
+  npm run migration:revert
+  ```
+
+---
+
+## Testing
+
+Execute unit and integration tests within each microservice directory:
+
 ```bash
-npm test
+npm run test
 ```
 
-> ### Documentation Apis
+Interactive REST requests are also available in [booking.rest](./booking.rest) for use with REST Client extensions.
 
-Each microservice has a `Swagger OpenAPI`. Browse to `/swagger` for a list of endpoints.
+---
 
-As part of API testing, I created the [booking.rest](./booking.rest) file which can be run with the [REST Client](https://github.com/Huachao/vscode-restclient) `VSCode plugin`.
+## API Documentation
 
-# Support
+Each microservice exposes an interactive OpenAPI (Swagger) interface when running:
+* **Identity API**: `http://localhost:3333/swagger`
+* **Flight API**: `http://localhost:3344/swagger`
+* **Passenger API**: `http://localhost:3355/swagger`
+* **Booking API**: `http://localhost:3366/swagger`
 
-If you like my work, feel free to:
-
-- ⭐ this repository. And we will be happy together :)
-
-Thanks a bunch for supporting me!
+---
 
 ## Contribution
 
-Thanks to all [contributors](https://github.com/AbiyuNigussie/booking-microservices-nestjs/graphs/contributors), you're awesome and this wouldn't be possible without you! The goal is to build a categorized, community-driven collection of very well-known resources.
+Please review the [Contribution Guidelines](./CONTRIBUTION.md) before submitting pull requests or opening issues.
 
-Please follow this [contribution guideline](./CONTRIBUTION.md) to submit a pull request or create the issue.
-
-## Project References & Credits
-
-- [https://github.com/jbogard/ContosoUniversityDotNetCore-Pages](https://github.com/jbogard/ContosoUniversityDotNetCore-Pages)
-- [https://github.com/nestjs](https://github.com/nestjs)
-
+---
 
 ## License
-This project is made available under the MIT license. See [LICENSE](https://github.com/AbiyuNigussie/booking-microservices-nestjs/blob/main/LICENSE) for details.
+
+This project is licensed under the [MIT License](./LICENSE).
